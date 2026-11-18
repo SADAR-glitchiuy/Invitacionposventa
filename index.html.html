@@ -188,7 +188,7 @@ h2{font:800 clamp(26px,3.4vw,40px)/1.12 var(--font);font-stretch:112%;letter-spa
       <h1 id="h-intro">Ganate tu lugar en el taller BYD.</h1>
       <p class="lead">Respondé 4 preguntas sobre la tecnología BYD. Con cada acierto se carga la batería: cuando llega al 100%, tu entrada está lista.</p>
       <button class="btn" id="start" type="button">Empezar la trivia</button>
-      <p class="fine">Son 4 preguntas y tenés 13 segundos para responder cada una.</p>
+      <p class="fine">Son 4 preguntas y tenés 15 segundos para responder cada una.</p>
     </div>
   </section>
 
@@ -260,8 +260,9 @@ h2{font:800 clamp(26px,3.4vw,40px)/1.12 var(--font);font-stretch:112%;letter-spa
 (function(){
   // Configuración de la inscripción.
   // FORM_URL: link a un formulario externo (por ejemplo Google Forms). Si se completa, el botón "Inscribirme" abre ese link.
+  // SHEET_URL: dirección de la aplicación web de Google Apps Script que guarda cada inscripción en una planilla de Google Sheets. Si está completa, tiene prioridad sobre EMAIL.
   // EMAIL: casilla que recibe las inscripciones si se usa el formulario de esta página.
-  var CONFIG={FORM_URL:'',EMAIL:'steixeira@sadar.com.uy'};
+  var CONFIG={FORM_URL:'',SHEET_URL:'https://script.google.com/macros/s/AKfycbwE2k-pTqOAtiGQWsX5lMoLt1U0UJw8B0_2VZtx8nC3dZvxNScIDzlmN3ZGxGxqCyHD1w/exec',EMAIL:'steixeira@sadar.com.uy'};
 
   var $=function(id){return document.getElementById(id)};
   var QUESTIONS=[
@@ -284,7 +285,7 @@ h2{font:800 clamp(26px,3.4vw,40px)/1.12 var(--font);font-stretch:112%;letter-spa
   ];
   var LETTERS=['A','B','C','D'];
   var idx=0,charge=0,reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var LIMIT=13,tmr=0,tStart=0,retryMode=false;
+  var LIMIT=15,tmr=0,tStart=0,retryMode=false;
   function stopTimer(){clearInterval(tmr);tmr=0}
   function paintTimer(left){
     var s=Math.max(0,Math.ceil(left)),low=left<=5;
@@ -429,6 +430,22 @@ h2{font:800 clamp(26px,3.4vw,40px)/1.12 var(--font);font-stretch:112%;letter-spa
       nombre:f.nombre.value.trim(),apellido:f.apellido.value.trim(),
       mail:f.mail.value.trim(),telefono:f.telefono.value.trim()
     };
+    if(CONFIG.SHEET_URL){
+      var sendBtn=form.querySelector('button[type=submit]');
+      sendBtn.disabled=true;sendBtn.textContent='Enviando…';
+      var payload={nombre:data.nombre,apellido:data.apellido,mail:data.mail,telefono:data.telefono,imagenes:'Sí'};
+      fetch(CONFIG.SHEET_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)})
+        .then(function(){
+          $('doneP').textContent=data.nombre+', tu inscripción quedó registrada. Te esperamos el sábado 28 de noviembre a las 10 h en Daniel Muñoz 2000.';
+          form.reset();
+          show(pDone,$('doneH'));
+        })
+        .catch(function(){
+          err.textContent='No pudimos enviar tu inscripción. Revisá tu conexión y volvé a intentarlo.';
+        })
+        .then(function(){sendBtn.disabled=false;sendBtn.textContent='Confirmar inscripción'});
+      return;
+    }
     if(!CONFIG.EMAIL){
       note.hidden=false;
       note.textContent='Vista previa: este formulario todavía no está conectado a una casilla ni a un formulario externo, así que no se envió nada.';
